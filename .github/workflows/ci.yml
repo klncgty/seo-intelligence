@@ -11,11 +11,6 @@ jobs:
         options: --health-cmd pg_isready --health-interval 5s --health-retries 10
       redis: {image: "redis:7", ports: ["6379:6379"]}
       clickhouse: {image: "clickhouse/clickhouse-server:latest", ports: ["8123:8123"]}
-      minio:
-        image: minio/minio:latest
-        env: {MINIO_ROOT_USER: seo-minio, MINIO_ROOT_PASSWORD: seo-minio-dev-secret}
-        ports: ["9000:9000"]
-        options: server /data
     defaults: {run: {working-directory: backend}}
     steps:
       - uses: actions/checkout@v4
