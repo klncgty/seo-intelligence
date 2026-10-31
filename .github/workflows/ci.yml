@@ -10,10 +10,27 @@ jobs:
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-retries 10
       redis: {image: "redis:7", ports: ["6379:6379"]}
-      clickhouse: {image: "clickhouse/clickhouse-server:latest", ports: ["8123:8123"]}
+      clickhouse:
+        image: clickhouse/clickhouse-server:latest
+        env:
+          CLICKHOUSE_USER: default
+          CLICKHOUSE_PASSWORD: ""
+          CLICKHOUSE_ALWAYS_ALLOW_BLANK_PASSWORD: "1"
+        ports: ["8123:8123"]
     defaults: {run: {working-directory: backend}}
     steps:
       - uses: actions/checkout@v4
+      - name: Setup Mock Claude CLI
+        run: |
+          sudo bash -c 'cat << "EOF" > /usr/local/bin/claude
+          #!/bin/sh
+          if [ "$1" = "--version" ]; then
+            echo "Claude Code 1.0.0"
+            exit 0
+          fi
+          echo "{\"status\": \"ok\", \"fix\": \"mock fix applied\"}"
+          EOF'
+          sudo chmod +x /usr/local/bin/claude
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --frozen
       - run: uv run pytest -q

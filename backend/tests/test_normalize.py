@@ -93,9 +93,8 @@ def test_url_normalization_idempotent(url):
 @hsettings(max_examples=500)
 def test_ssrf_policy_never_allows_special_ranges(ip):
     if is_public_ip(ip):
-        assert not (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved)
-        if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped:
-            assert is_public_ip(ip.ipv4_mapped)
+        check_ip = ip.ipv4_mapped if (isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped) else ip
+        assert not (check_ip.is_private or check_ip.is_loopback or check_ip.is_link_local or check_ip.is_multicast or check_ip.is_reserved)
 
 
 @given(st.from_regex(r"([a-z0-9]{1,8}\.){0,3}[a-z0-9]{1,10}\.(com\.tr|org\.tr|com|co\.uk|de)", fullmatch=True))

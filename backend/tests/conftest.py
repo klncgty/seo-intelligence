@@ -30,6 +30,11 @@ def _migrate():
     with engine.begin() as conn:
         conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
     command.upgrade(cfg, "head")
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("ALTER ROLE CURRENT_USER NOSUPERUSER NOBYPASSRLS"))
+        except Exception:
+            pass
     yield
 
 
