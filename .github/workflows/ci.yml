@@ -17,9 +17,13 @@ jobs:
           CLICKHOUSE_PASSWORD: ""
           CLICKHOUSE_ALWAYS_ALLOW_BLANK_PASSWORD: "1"
         ports: ["8123:8123"]
+        options: --health-cmd "wget --no-verbose --tries=1 --spider http://127.0.0.1:8123/ping || exit 1" --health-interval 5s --health-retries 10
     defaults: {run: {working-directory: backend}}
     steps:
       - uses: actions/checkout@v4
+      - name: Configure Postgres permissions for RLS
+        run: |
+          docker exec $(docker ps -q --filter ancestor=postgres:17) psql -U seo -d seo_intelligence_test -c "ALTER ROLE seo NOSUPERUSER NOBYPASSRLS;"
       - name: Setup Mock Claude CLI
         run: |
           sudo bash -c 'cat << "EOF" > /usr/local/bin/claude

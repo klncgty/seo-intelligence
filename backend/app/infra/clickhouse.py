@@ -44,7 +44,9 @@ class ClickHouse:
         self.database = database or s.clickhouse_database
         if not _IDENT.match(self.database):
             raise ValueError("invalid ClickHouse database name")
-        self.auth = (user or s.clickhouse_user, password if password is not None else s.clickhouse_password)
+        u = user or s.clickhouse_user
+        p = password if password is not None else s.clickhouse_password
+        self.auth = (u, p) if (u and p) else None
         self._client = httpx.Client(timeout=timeout, trust_env=False)
 
     @property
