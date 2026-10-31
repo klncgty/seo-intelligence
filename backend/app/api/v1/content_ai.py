@@ -12,10 +12,10 @@ from app.api.v1.domains import _domain
 from app.api.v1.keywords import _ch, _ctx
 from app.auth import Principal, current_principal, get_db
 from app.infra.clickhouse import ClickHouse
-from app.models import AiPrompt, AiPromptSet, Project, Site
+from app.models import AiPrompt, AiPromptSet, Competitor, Project, Site
 from app.normalize.locale import DEFAULT_DATABASE
 from app.services import ai_visibility as aiv
-from app.services import content, credits, llm_assistant, local_seo
+from app.services import content, credits, llm_assistant, local_seo, tag_intelligence
 from app.services.keywords import service as kw_service
 
 router = APIRouter()
@@ -43,6 +43,57 @@ async def check(body: BriefIn, db: Session = Depends(get_db), p: Principal = Dep
         raise ApiError(422, "validation_error", "url required")
     _ctx(body.database)
     return await content.check_page(_ch(), body.url, body.keyword, body.database, db=db, org_id=p.org_id, site_id=body.site_id)
+
+
+class TagIntelligenceIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    keyword: str = Field(min_length=1, max_length=300)
+    url: str | None = Field(None, max_length=2048)
+    competitor_urls: list[str] = Field(default_factory=list)
+    site_id: int | None = None
+    lang: str = "tr"
+
+
+@router.post("/content/tag-intelligence")
+async def get_tag_intelligence(
+    body: TagIntelligenceIn,
+    db: Session = Depends(get_db),
+    p: Principal = Depends(current_principal),
+):
+    target_url = body.url
+    comp_urls = list(body.competitor_urls)
+
+    if body.site_id is not None:
+        site = get_or_404(db, Site, body.site_id, p.org_id)
+        if not target_url:
+            target_url = site.base_url
+        if not comp_urls:
+            comps = db.scalars(
+                select(Competitor).where(
+                    Competitor.site_id == site.id,
+                    Competitor.is_active.is_(True),
+                )
+            ).all()
+            comp_urls = [c.base_url for c in comps if c.base_url]
+
+    if not target_url:
+        raise ApiError(422, "validation_error", "target 'url' or valid 'site_id' required")
+    if not comp_urls:
+        raise ApiError(
+            422,
+            "validation_error",
+            "at least one competitor URL required (via competitor_urls or registered site competitors)",
+        )
+
+    res = await tag_intelligence.run_tag_intelligence(
+        target_url=target_url,
+        competitor_urls=comp_urls,
+        target_keyword=body.keyword,
+        lang=body.lang,
+    )
+    if "error" in res and not res.get("audit"):
+        raise ApiError(400, "analysis_failed", res["error"])
+    return res
 
 
 @router.get("/content/templates")

@@ -125,6 +125,12 @@ def build_parser() -> argparse.ArgumentParser:
     cmd("comp-opps", "generate competitor opportunities", ("site_id", {"type": int}))
     cmd("comp-keyword-gap", "keyword gap via external provider", ("site_id", {"type": int}))
     cmd("comp-backlinks", "backlink comparison via external provider", ("site_id", {"type": int}))
+    cmd("tag-intel", "reverse engineer competitor tags and get winning rank #1 blueprint",
+        ("--keyword", {"required": True}),
+        ("--url", {}),
+        ("--comp", {"action": "append", "dest": "competitor_urls"}),
+        ("--site-id", {"type": int, "dest": "site_id"}),
+        ("--lang", {"default": "tr"}))
     cmd("seo-data-status", "external SEO data provider status")
     cmd("crawler-settings", "crawler safety limits")
     cmd("worker", "run the background worker")
@@ -228,6 +234,15 @@ def route(a) -> tuple[str, str, dict | None, dict | None]:
         return "DELETE", f"/api/v1/sites/{sid}/competitors/{a.comp_id}", None, None
     if c == "comp-crawl":
         return "POST", f"/api/v1/sites/{sid}/competitors/{a.comp_id}/crawls", None, None
+    if c == "tag-intel":
+        body = {
+            "keyword": a.keyword,
+            "url": getattr(a, "url", None),
+            "competitor_urls": getattr(a, "competitor_urls", None) or [],
+            "site_id": getattr(a, "site_id", None),
+            "lang": getattr(a, "lang", "tr") or "tr",
+        }
+        return "POST", "/api/v1/content/tag-intelligence", None, body
     raise SystemExit(f"unknown command {c}")
 
 
