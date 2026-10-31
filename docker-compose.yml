@@ -1,0 +1,103 @@
+# Profiles: core (db, api, worker) is the default; `--profile analytics` adds ClickHouse, MinIO, Redis;
+# `--profile full` = everything. All published ports bind to 127.0.0.1. Not validated on this machine (no Docker) —
+# see docs/progress.md; validate before deploying to a VM.
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp"]
+  restart: unless-stopped
+
+x-app: &app
+  <<: *hardening
+  build:
+    context: ./backend
+    dockerfile: Dockerfile
+  env_file: [.env]
+  environment:
+    DATABASE_URL: postgresql+psycopg://seo:seo@db:5432/seo_intelligence
+    CLICKHOUSE_URL: ${CLICKHOUSE_URL:-}
+    REDIS_URL: ${REDIS_URL:-}
+    MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+  depends_on:
+    db:
+      condition: service_healthy
+  user: "10001:10001"
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: seo_intelligence
+      POSTGRES_USER: seo
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-seo}
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seo -d seo_intelligence"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+    restart: unless-stopped
+    deploy: {resources: {limits: {memory: 2g}}}
+
+  api:
+    <<: *app
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+    ports: ["127.0.0.1:8000:8000"]
+    # egress: Google OAuth/API, providers; publishing the localhost port also needs a non-internal network
+    networks: [backend, egress]
+    deploy: {resources: {limits: {memory: 1g}}}
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "app.worker"]
+    # crawler needs internet; app-level SSRF policy is the isolation layer (no egress proxy yet — ADR 0006)
+    networks: [backend, egress]
+    deploy: {resources: {limits: {memory: 1g}}}
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    profiles: [analytics, full]
+    environment:
+      CLICKHOUSE_DB: seo
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+    volumes: [clickhouse_data:/var/lib/clickhouse]
+    ports: ["127.0.0.1:8123:8123"]
+    networks: [backend]
+    ulimits: {nofile: {soft: 262144, hard: 262144}}
+    restart: unless-stopped
+    deploy: {resources: {limits: {memory: 4g}}}
+
+  minio:
+    image: minio/minio:latest
+    profiles: [analytics, full]
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-seo-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-change-me-please}
+    volumes: [minio_data:/data]
+    ports: ["127.0.0.1:9000:9000", "127.0.0.1:9001:9001"]
+    networks: [backend]
+    restart: unless-stopped
+
+  redis:
+    image: redis:7
+    profiles: [analytics, full]
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    networks: [backend]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  minio_data:
+
+networks:
+  backend:
+    internal: true
+  egress: {}

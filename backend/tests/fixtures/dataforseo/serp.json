@@ -1,0 +1,8 @@
+{"status_code": 20000, "status_message": "Ok.", "cost": 0.002, "tasks": [{"id": "req-serp-1", "status_code": 20000, "status_message": "Ok.", "cost": 0.002,
+ "result": [{"keyword": "kahve makinesi", "item_types": ["organic", "people_also_ask", "ai_overview"],
+  "items": [
+   {"type": "ai_overview", "rank_group": 1, "rank_absolute": 1, "references": [{"domain": "www.example.com.tr"}, {"domain": "blog.rakip.com"}]},
+   {"type": "organic", "rank_group": 1, "rank_absolute": 2, "domain": "www.example.com.tr", "url": "https://www.example.com.tr/kahve", "title": "Kahve"},
+   {"type": "people_also_ask", "rank_group": 1, "rank_absolute": 3, "items": [{"title": "En iyi kahve makinesi hangisi?"}]},
+   {"type": "organic", "rank_group": 2, "rank_absolute": 4, "domain": "shop.rakip.com", "url": "https://shop.rakip.com/k", "title": "Rakip"}
+  ]}]}]}

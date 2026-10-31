@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Direct CLI runner for seo-intelligence
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+unset VIRTUAL_ENV
+PYTHONWARNINGS="ignore" exec uv run --project "$SCRIPT_DIR/backend" seo "$@"

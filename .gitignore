@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.agent-logs/
+*.log
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.ruff_cache/
+.mypy_cache/
+.DS_Store
