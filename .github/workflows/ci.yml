@@ -6,24 +6,22 @@ jobs:
     services:
       postgres:
         image: postgres:17
-        env: {POSTGRES_USER: seo, POSTGRES_PASSWORD: seo, POSTGRES_DB: seo_intelligence_test}
+        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: seo_intelligence_test}
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-retries 10
       redis: {image: "redis:7", ports: ["6379:6379"]}
       clickhouse:
         image: clickhouse/clickhouse-server:latest
         env:
-          CLICKHOUSE_USER: default
-          CLICKHOUSE_PASSWORD: ""
           CLICKHOUSE_ALWAYS_ALLOW_BLANK_PASSWORD: "1"
         ports: ["8123:8123"]
         options: --health-cmd "wget --no-verbose --tries=1 --spider http://127.0.0.1:8123/ping || exit 1" --health-interval 5s --health-retries 10
     defaults: {run: {working-directory: backend}}
     steps:
       - uses: actions/checkout@v4
-      - name: Configure Postgres permissions for RLS
+      - name: Create non-superuser application role for RLS
         run: |
-          docker exec $(docker ps -q --filter ancestor=postgres:17) psql -U seo -d seo_intelligence_test -c "ALTER ROLE seo NOSUPERUSER NOBYPASSRLS;"
+          docker exec $(docker ps -q --filter ancestor=postgres:17) psql -U postgres -d seo_intelligence_test -c "CREATE USER seo WITH PASSWORD 'seo' CREATEDB; GRANT ALL ON DATABASE seo_intelligence_test TO seo; GRANT ALL ON SCHEMA public TO seo; ALTER SCHEMA public OWNER TO seo;"
       - name: Setup Mock Claude CLI
         run: |
           sudo bash -c 'cat << "EOF" > /usr/local/bin/claude
