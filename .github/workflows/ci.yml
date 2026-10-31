@@ -19,9 +19,12 @@ jobs:
     defaults: {run: {working-directory: backend}}
     steps:
       - uses: actions/checkout@v4
-      - name: Create non-superuser application role for RLS
+      - name: Configure database roles and reset ClickHouse password
         run: |
           docker exec $(docker ps -q --filter ancestor=postgres:17) psql -U postgres -d seo_intelligence_test -c "CREATE USER seo WITH PASSWORD 'seo' CREATEDB; GRANT ALL ON DATABASE seo_intelligence_test TO seo; GRANT ALL ON SCHEMA public TO seo; ALTER SCHEMA public OWNER TO seo;"
+          CH_ID=$(docker ps -q --filter ancestor=clickhouse/clickhouse-server:latest)
+          docker exec $CH_ID rm -f /etc/clickhouse-server/users.d/default-password.xml
+          sleep 2
       - name: Setup Mock Claude CLI
         run: |
           sudo bash -c 'cat << "EOF" > /usr/local/bin/claude
