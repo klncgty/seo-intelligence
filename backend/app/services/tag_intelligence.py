@@ -7,11 +7,8 @@ and produces actionable blueprints for ranking #1 in Google and converting visit
 
 from __future__ import annotations
 
-import math
 import re
-from collections import Counter, defaultdict
-from urllib.parse import unquote, urlsplit
-from urllib.robotparser import RobotFileParser
+from collections import Counter
 
 from lxml import html as lhtml
 
@@ -222,29 +219,53 @@ def compare_tags(
     desc_has_kw = norm_kw in match_key(target.get("meta_description", ""), lang)
     h1_has_kw = any(norm_kw in match_key(h, lang) for h in target.get("h1", []))
 
-    # Generate Recommended Winning Tags
-    rec_title = f"{target_keyword.title()} — Doğrudan Üreticisinden En İyisi"[:58]
-    if len(rec_title) < 50:
-        rec_title = f"{target_keyword.title()} — %100 Doğal & Orijinal | Hemen İncele"[:60]
+    # Generate Recommended Winning Tags (Bilingual TR & EN)
+    if lang == "en":
+        rec_title = f"{target_keyword.title()} — #1 Platform for Growth"[:58]
+        if len(rec_title) < 50:
+            rec_title = f"{target_keyword.title()} — Discover & Convert Leads Fast"[:60]
 
-    top_missing_kw = [t["term"] for t in missing_semantic_terms[:3]]
-    kw_suffix = f" {', '.join(top_missing_kw)} özellikleri" if top_missing_kw else ""
-    rec_desc = (
-        f"{target_keyword.title()} arayanlar için en kaliteli seçenekler.{kw_suffix}. "
-        f"Doğal üretim, uygun fiyat ve hızlı teslimat avantajıyla keşfedin."
-    )[:155]
+        top_missing_kw = [t["term"] for t in missing_semantic_terms[:3]]
+        kw_suffix = f" with {', '.join(top_missing_kw)}" if top_missing_kw else ""
+        rec_desc = (
+            f"The leading {target_keyword.lower()} for modern teams{kw_suffix}. "
+            f"Automate discovery, personalize outreach at scale, and drive revenue. Try it free today."
+        )[:155]
 
-    rec_h1 = f"{target_keyword.title()}: Doğal ve Kusursuz Seçenekler"
-    rec_h2 = []
-    if missing_questions:
-        rec_h2.extend(missing_questions[:4])
+        rec_h1 = f"{target_keyword.title()}: High-Converting Outreach & Discovery"
+        rec_h2 = []
+        if missing_questions:
+            rec_h2.extend(missing_questions[:4])
+        else:
+            rec_h2.extend([
+                f"What is {target_keyword.title()} and How Does It Work?",
+                "Key Features & Deliverability Checklist",
+                "Pricing, ROI & Campaign Automation",
+                f"Frequently Asked Questions About {target_keyword.title()}",
+            ])
     else:
-        rec_h2.extend([
-            f"{target_keyword.title()} Nedir ve Nasıl Seçilir?",
-            f"En İyi {target_keyword.title()} Çeşitleri ve Özellikleri",
-            f"{target_keyword.title()} Fiyatları ve Satın Alma Rehberi",
-            f"{target_keyword.title()} Kullanımı ve Saklama Koşulları",
-        ])
+        rec_title = f"{target_keyword.title()} — Doğrudan Üreticisinden En İyisi"[:58]
+        if len(rec_title) < 50:
+            rec_title = f"{target_keyword.title()} — %100 Doğal & Orijinal | Hemen İncele"[:60]
+
+        top_missing_kw = [t["term"] for t in missing_semantic_terms[:3]]
+        kw_suffix = f" {', '.join(top_missing_kw)} özellikleri" if top_missing_kw else ""
+        rec_desc = (
+            f"{target_keyword.title()} arayanlar için en kaliteli seçenekler.{kw_suffix}. "
+            f"Doğal üretim, uygun fiyat ve hızlı teslimat avantajıyla keşfedin."
+        )[:155]
+
+        rec_h1 = f"{target_keyword.title()}: Doğal ve Kusursuz Seçenekler"
+        rec_h2 = []
+        if missing_questions:
+            rec_h2.extend(missing_questions[:4])
+        else:
+            rec_h2.extend([
+                f"{target_keyword.title()} Nedir ve Nasıl Seçilir?",
+                f"En İyi {target_keyword.title()} Çeşitleri ve Özellikleri",
+                f"{target_keyword.title()} Fiyatları ve Satın Alma Rehberi",
+                f"{target_keyword.title()} Kullanımı ve Saklama Koşulları",
+            ])
 
     # Recommended Schema Blueprint
     rec_schemas = ["Organization", "BreadcrumbList"]

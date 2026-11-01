@@ -16,8 +16,21 @@ from app.models import (
     SearchPerformanceDaily,
     Site,
 )
-from app.services.growth.engine import INDEXING_RULES, _opp, _prioritize, generate_opportunities
-from app.services.growth.types import Ga4Row, GrowthInput, GscRow, LinkGraph, Opportunity, PageIssue
+from app.services.growth.engine import (
+    INDEXING_RULES,
+    Thresholds,
+    _opp,
+    _prioritize,
+    generate_opportunities,
+)
+from app.services.growth.types import (
+    Ga4Row,
+    GrowthInput,
+    GscRow,
+    LinkGraph,
+    Opportunity,
+    PageIssue,
+)
 
 ORGANIC_CHANNEL = "Organic Search"
 
@@ -130,7 +143,13 @@ def generate_for_site(db: Session, site: Site, start: date | None = None, end: d
     else:
         periods = default_periods()
     inp = build_input(db, site, *periods)
-    opps = generate_opportunities(inp)
+    total_imps = sum(r.impressions for r in inp.gsc_rows)
+    thresholds = Thresholds(
+        min_impressions=max(1, min(200, int(total_imps * 0.03))),
+        striking_min_impressions=max(1, min(500, int(total_imps * 0.02))),
+        min_bucket_rows=1,
+    ) if total_imps < 500 else Thresholds()
+    opps = generate_opportunities(inp, thresholds=thresholds)
     if not opps and not inp.gsc_available and not inp.ga4_available:
         crawl = latest_completed_crawl(db, site.id)
         if crawl is not None:
